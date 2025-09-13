@@ -1,96 +1,224 @@
-<div align="center">
+# VibeVoice4macOS — VibeVoice on Apple Silicon (macOS)
 
-## 🎙️ VibeVoice: A Frontier Long Conversational Text-to-Speech Model
-[![Project Page](https://img.shields.io/badge/Project-Page-blue?logo=microsoft)](https://microsoft.github.io/VibeVoice)
-[![Hugging Face](https://img.shields.io/badge/HuggingFace-Collection-orange?logo=huggingface)](https://huggingface.co/collections/microsoft/vibevoice-68a2ef24a875c44be47b034f)
-[![Technical Report](https://img.shields.io/badge/Technical-Report-red?logo=adobeacrobatreader)](https://arxiv.org/pdf/2508.19205)
+This fork adds a **one-file, self-contained setup & runner** for the full VibeVoice-Large [VibeVoice](https://github.com/WhoPaidItAll/VibeVoice) so you can launch the Gradio demo or do simple CLI inference **locally on macOS Apple Silicon**—no CUDA, no sudo, no global installs.
 
+> ✅ Apple Silicon (arm64) + Python ≥ 3.10
+> ✅ Everything sandboxed under `~/vibevoice_mac`
+> ✅ Uses PyTorch **MPS** when available (otherwise CPU)
+> ✅ Resumes & verifies large sharded model downloads
+> ✅ Optional Hugging Face token auto-loaded from `~/vibevoice_mac/.env` or `.hf_token`
 
-</div>
+---
 
+## What’s included in this fork
 
-<div align="center">
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="Figures/VibeVoice_logo_white.png">
-  <img src="Figures/VibeVoice_logo.png" alt="VibeVoice Logo" width="300">
-</picture>
-</div>
+* `vibevoice_mac_arm64.sh` — the all-in-one installer/runner for macOS:
 
+  * Creates a local venv
+  * Clones the upstream repo
+  * Downloads the chosen model with resume & shard verification
+  * Provides a portable `ffmpeg` if needed (or `--allow-brew`)
+  * Runs the **official** Gradio demo via a bootstrap that:
 
-**2025-09-05: VibeVoice is an open-source research framework intended to advance collaboration in the speech synthesis community. After release, we discovered instances where the tool was used in ways inconsistent with the stated intent. Since responsible use of AI is one of Microsoft’s guiding principles, we have disabled this repo until we are confident that out-of-scope use is no longer possible.**
+    * forces **SDPA** attention (avoids FlashAttention)
+    * **never** dispatches to CUDA
+    * prefers **MPS** on Apple GPUs
 
-<br>
+> Upstream model code, demos, and assets remain under their original directories; this script only orchestrates a Mac-friendly setup.
 
-VibeVoice is a novel framework designed for generating **expressive**, **long-form**, **multi-speaker** conversational audio, such as podcasts, from text. It addresses significant challenges in traditional Text-to-Speech (TTS) systems, particularly in scalability, speaker consistency, and natural turn-taking.
+---
 
-A core innovation of VibeVoice is its use of continuous speech tokenizers (Acoustic and Semantic) operating at an ultra-low frame rate of 7.5 Hz. These tokenizers efficiently preserve audio fidelity while significantly boosting computational efficiency for processing long sequences. VibeVoice employs a [next-token diffusion](https://arxiv.org/abs/2412.08635) framework, leveraging a Large Language Model (LLM) to understand textual context and dialogue flow, and a diffusion head to generate high-fidelity acoustic details.
+## Requirements
 
-The model can synthesize speech up to **90 minutes** long with up to **4 distinct speakers**, surpassing the typical 1-2 speaker limits of many prior models. 
+* macOS on **Apple Silicon** (`arm64`)
+* **Python 3.10+** available as `python3`
+* Internet for first run (pip, git, model download)
+* Several GB of free disk (models can be large)
 
+---
 
-<p align="left">
-  <img src="Figures/MOS-preference.png" alt="MOS Preference Results" height="260px">
-  <img src="Figures/VibeVoice.jpg" alt="VibeVoice Overview" height="250px" style="margin-right: 10px;">
-</p>
+## Quick start
 
+```bash
+# 1) Clone your fork (this repo)
+git clone https://github.com/<your-username>/vi-voice4mac.git
+cd vi-voice4mac
 
-### 🎵 Demo Examples
+# 2) Make the script executable
+chmod +x vibevoice_mac_arm64.sh
 
+# 3) (Recommended) Add your Hugging Face token once
+mkdir -p ~/vibevoice_mac
+printf 'HF_TOKEN=hf_your_token_here\n' > ~/vibevoice_mac/.env
 
-**Video Demo**
+# 4) Run the Gradio demo (default model; local UI on port 7860)
+bash vibevoice_mac_arm64.sh --demo
 
-We produced this video with [Wan2.2](https://github.com/Wan-Video/Wan2.2). We sincerely appreciate the Wan-Video team for their great work.
+# 5) Share the demo publicly (Gradio share URL)
+bash vibevoice_mac_arm64.sh --demo --share
 
-**English**
-<div align="center">
+# 6) Try a smaller model if the Large one is heavy
+bash vibevoice_mac_arm64.sh --model microsoft/VibeVoice-1.5B --demo
+```
 
-https://github.com/user-attachments/assets/0967027c-141e-4909-bec8-091558b1b784
+---
 
-</div>
+## Hugging Face token (for gated/private models)
 
+The script automatically picks a token from:
 
-**Chinese**
-<div align="center">
+1. Existing env (`HF_TOKEN`)
+2. `~/vibevoice_mac/.env` (e.g. `HF_TOKEN=hf_xxx`)
+3. `~/vibevoice_mac/.hf_token` (file containing only the token string)
 
-https://github.com/user-attachments/assets/322280b7-3093-4c67-86e3-10be4746c88f
+Examples:
 
-</div>
+```bash
+# One-time setup (preferred)
+mkdir -p ~/vibevoice_mac
+cat > ~/vibevoice_mac/.env <<'EOF'
+HF_TOKEN=hf_your_token_here
+EOF
 
-**Cross-Lingual**
-<div align="center">
+# Or pass inline per run
+HF_TOKEN=hf_your_token_here bash vibevoice_mac_arm64.sh --demo
+```
 
-https://github.com/user-attachments/assets/838d8ad9-a201-4dde-bb45-8cd3f59ce722
+> **Never commit your token.** It lives outside the repo by default.
 
-</div>
+---
 
-**Spontaneous Singing**
-<div align="center">
+## Basic usage
 
-https://github.com/user-attachments/assets/6f27a8a5-0c60-4f57-87f3-7dea2e11c730
+### Launch Gradio demo
 
-</div>
+```bash
+# Default model: aoi-ot/VibeVoice-Large
+bash vibevoice_mac_arm64.sh --demo
 
+# Public sharing
+bash vibevoice_mac_arm64.sh --demo --share
 
-**Long Conversation with 4 people**
-<div align="center">
+# Different model
+bash vibevoice_mac_arm64.sh --model microsoft/VibeVoice-1.5B --demo
+```
 
-https://github.com/user-attachments/assets/a357c4b6-9768-495c-a576-1618f6275727
+### CLI-style inference
 
-</div>
+```bash
+bash vibevoice_mac_arm64.sh --infer
+# Output: ~/vibevoice_mac/outputs/sample_out.wav
+```
 
-For more examples, see the [Project Page](https://microsoft.github.io/VibeVoice).
+### Clean everything
 
+```bash
+bash vibevoice_mac_arm64.sh --clean --force
+```
 
+### Useful env/flags
 
-## Risks and limitations
+```bash
+# Change the demo port
+PORT=7861 bash vibevoice_mac_arm64.sh --demo
 
-While efforts have been made to optimize it through various techniques, it may still produce outputs that are unexpected, biased, or inaccurate. VibeVoice inherits any biases, errors, or omissions produced by its base model (specifically, Qwen2.5 1.5b in this release).
-Potential for Deepfakes and Disinformation: High-quality synthetic speech can be misused to create convincing fake audio content for impersonation, fraud, or spreading disinformation. Users must ensure transcripts are reliable, check content accuracy, and avoid using generated content in misleading ways. Users are expected to use the generated content and to deploy the models in a lawful manner, in full compliance with all applicable laws and regulations in the relevant jurisdictions. It is best practice to disclose the use of AI when sharing AI-generated content.
+# Allow Homebrew ffmpeg (if missing)
+bash vibevoice_mac_arm64.sh --allow-brew --demo
+```
 
-English and Chinese only: Transcripts in languages other than English or Chinese may result in unexpected audio outputs.
+---
 
-Non-Speech Audio: The model focuses solely on speech synthesis and does not handle background noise, music, or other sound effects.
+## Models (quick guide)
 
-Overlapping Speech: The current model does not explicitly model or generate overlapping speech segments in conversations.
+| Model               | Context | Generation | Link                                                                                                 |
+| ------------------- | ------: | ---------: | ---------------------------------------------------------------------------------------------------- |
+| **VibeVoice-1.5B**  |     64K |   \~90 min | [https://huggingface.co/microsoft/VibeVoice-1.5B](https://huggingface.co/microsoft/VibeVoice-1.5B)   |
+| **VibeVoice-Large** |     32K |   \~45 min | [https://huggingface.co/microsoft/VibeVoice-Large](https://huggingface.co/microsoft/VibeVoice-Large) |
 
-We do not recommend using VibeVoice in commercial or real-world applications without further testing and development. This model is intended for research and development purposes only. Please use responsibly.
+* Default in this script: `aoi-ot/VibeVoice-Large` (change via `--model ...`)
+* Some models are **gated/private** → you’ll need a valid **HF token**
+
+---
+
+## What the script does (under the hood)
+
+* Creates **`~/vibevoice_mac`** with:
+
+  * `.venv/` (local Python virtualenv)
+  * `_cache/` (HF/Torch/Transformers caches)
+  * `models/` (downloaded model files)
+  * `tools/ffmpeg/ffmpeg` (portable binary if needed)
+  * `VibeVoice/` (upstream repo)
+  * `outputs/` (audio from CLI path)
+* Pins all HF caches inside the project folder (no global cache usage).
+* Verifies shard completeness from `model.safetensors.index.json` and **resumes** if any pieces are missing.
+* Bootstraps the demo to **force SDPA** and **avoid CUDA** on macOS.
+
+---
+
+## Troubleshooting
+
+* **401 / “Repository Not Found” / gated model**
+  Add a valid **HF token** (see token section above) and make sure the model grants your account access.
+
+* **Missing shard error (e.g., `model-00002-of-00010.safetensors`)**
+  Re-run the script; downloads resume and shards are re-verified. Also check you have enough free disk space.
+
+* **“Torch not compiled with CUDA enabled”**
+  Expected on macOS. The script never tries CUDA and forces SDPA/MPS/CPU.
+
+* **Port already in use**
+  `PORT=7861 bash vibevoice_mac_arm64.sh --demo`
+
+* **ffmpeg not found**
+  Script provides a portable `ffmpeg`; or pass `--allow-brew` to install via Homebrew.
+
+---
+
+## Notes & tips
+
+* **Performance**: MPS is faster than CPU, but still slower than high-end NVIDIA GPUs. For smoother UX, try `--model microsoft/VibeVoice-1.5B`.
+* **Attention backend**: The demo code prefers FlashAttention on CUDA; this fork **forces SDPA** (safe on MPS/CPU). Audio quality may differ from CUDA+FA2 runs.
+
+---
+
+## Responsible use (risks & limitations)
+
+High-quality synthetic speech can be misused (impersonation, fraud, disinformation). Use responsibly and comply with all applicable laws and policies. Disclose AI-generated content where appropriate.
+
+Other known limitations (from upstream notes):
+
+* English/Chinese are the strongest languages; others may be unstable.
+* Cross-lingual transfer can be inconsistent.
+* Spontaneous music/background sounds may appear depending on prompts.
+* No explicit support for overlapping speech.
+
+This project is intended for research & experimentation.
+
+---
+
+## Acknowledgements
+
+* **Upstream**: [WhoPaidItAll/VibeVoice](https://github.com/WhoPaidItAll/VibeVoice)
+* Hugging Face ecosystem (transformers, accelerate, huggingface\_hub)
+* PyTorch MPS on Apple Silicon
+
+---
+
+## License
+
+* The **vibevoice\_mac\_arm64.sh** helper script in this fork: MIT (or match upstream—add a `LICENSE` file accordingly).
+* **VibeVoice** code/models: their respective upstream licenses & model cards apply.
+
+---
+
+### Repository layout
+
+```
+.
+├─ vibevoice_mac_arm64.sh    # ← this script (macOS setup & runner)
+├─ VibeVoice/                # upstream repo code (cloned by the script at runtime)
+└─ README.md                 # this file
+```
+
+> The runtime sandbox (`~/vibevoice_mac/`) is created on first run and contains your venv, caches, models, token files, etc. It’s outside the repo so you don’t accidentally commit huge files or secrets.
