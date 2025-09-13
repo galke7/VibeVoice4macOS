@@ -3,10 +3,17 @@
 This fork adds a **one-file, self-contained setup & runner** for the full VibeVoice-Large [VibeVoice](https://github.com/WhoPaidItAll/VibeVoice) so you can launch the Gradio demo or do simple CLI inference **locally on macOS Apple Silicon**—no CUDA, no sudo, no global installs.
 
 > ✅ Apple Silicon (arm64) + Python ≥ 3.10
+
 > ✅ Everything sandboxed under `~/vibevoice_mac`
+
 > ✅ Uses PyTorch **MPS** when available (otherwise CPU)
+
 > ✅ Resumes & verifies large sharded model downloads
+
 > ✅ Optional Hugging Face token auto-loaded from `~/vibevoice_mac/.env` or `.hf_token`
+
+---
+<img width="1517" height="932" alt="image" src="https://github.com/user-attachments/assets/3e4aa10e-8b36-4eb4-b72c-f761ab0fbfd7" />
 
 ---
 
